@@ -163,9 +163,20 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
 
             <!-- 📋 Librarians Table -->
             <section>
+                <div class="bulk-actions" style="margin-bottom:10px;">
+                    <div class="bulk-left">
+                        <label><input type="checkbox" id="selectAllLibrarians"> <span style="margin-left:6px">Select All</span></label>
+                        <span id="bulkCountLibrarians" style="margin-left:12px;color:gray;"></span>
+                    </div>
+                    <div class="bulk-right">
+                        <button id="deleteSelectedLibrarians" class="action-btn delete" style="background:#e74c3c">Delete Selected</button>
+                    </div>
+                </div>
+
                 <table>
                     <thead>
                         <tr>
+                            <th style="width:40px">Select</th>
                             <th>ID</th>
                             <th>Full Name</th>
                             <th>Email</th>
@@ -184,6 +195,9 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
 
                                 echo "
                                     <tr>
+                                        <td><input type='checkbox' class='bulk-check-librarian' value='" . htmlspecialchars(
+                                            $row['librarian_id']
+                                        ) . "'></td>
                                         <td>{$row['librarian_id']}</td>
                                         <td>{$row['fullname']}</td>
                                         <td>{$row['email']}</td>
@@ -197,7 +211,7 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                                 ";
                             }
                         } else {
-                            echo "<tr><td colspan='7'>No librarian records found.</td></tr>";
+                            echo "<tr><td colspan='8'>No librarian records found.</td></tr>";
                         }
                         $conn->close();
                         ?>
@@ -341,6 +355,52 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                 run: filterAndSort,
                 originalCount: originalRows.length
             };
+        })();
+
+        // Bulk actions for librarians
+        (function() {
+            const selectAll = document.getElementById('selectAllLibrarians');
+            const deleteBtn = document.getElementById('deleteSelectedLibrarians');
+            const bulkCount = document.getElementById('bulkCountLibrarians');
+
+            function updateBulkCount() {
+                const checked = document.querySelectorAll('.bulk-check-librarian:checked').length;
+                if (bulkCount) bulkCount.textContent = checked ? `${checked} selected` : '';
+            }
+
+            document.addEventListener('change', (e) => {
+                if (e.target && e.target.classList && e.target.classList.contains('bulk-check-librarian')) {
+                    updateBulkCount();
+                }
+            });
+
+            if (selectAll) {
+                selectAll.addEventListener('change', () => {
+                    const checks = document.querySelectorAll('.bulk-check-librarian');
+                    checks.forEach(c => c.checked = selectAll.checked);
+                    updateBulkCount();
+                });
+            }
+
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    const ids = Array.from(document.querySelectorAll('.bulk-check-librarian:checked')).map(i => i.value);
+                    if (!ids.length) return Swal.fire({icon: 'info', title: 'Please select at least one librarian to delete.'});
+                    if (!(await confirmPopup('Are you sure you want to delete selected librarians?', {title: 'Confirm Delete', confirmText: 'Delete'}))) return;
+
+                    const form = new FormData();
+                    form.append('action', 'delete');
+                    form.append('type', 'librarians');
+                    ids.forEach(id => form.append('ids[]', id));
+
+                    fetch('bulk_action.php', { method: 'POST', body: form })
+                        .then(r => r.json())
+                        .then(j => {
+                            if (j.success) location.reload(); else Swal.fire({icon:'error', title: j.message || 'Error'});
+                        })
+                        .catch(() => Swal.fire({icon:'error', title: 'Network or server error'}));
+                });
+            }
         })();
     </script>
 

@@ -405,8 +405,8 @@ $borrowed = $conn->query("SELECT COUNT(*) AS total FROM tbl_borrow_requests WHER
         /* ============================================================
            STATUS UPDATE (AJAX)
         ============================================================ */
-        function updateStatus(requestId, newStatus) {
-            if (!confirm("Are you sure you want to mark this as " + newStatus + "?")) return;
+        async function updateStatus(requestId, newStatus) {
+            if (!(await confirmPopup('Are you sure you want to mark this as ' + newStatus + '?', {title: 'Confirm Status Change'}))) return;
 
             fetch("update-request-status.php", {
                     method: "POST",
@@ -417,11 +417,12 @@ $borrowed = $conn->query("SELECT COUNT(*) AS total FROM tbl_borrow_requests WHER
                 })
                 .then(res => res.text())
                 .then(msg => {
-                    alert(msg);
-                    localStorage.setItem("lastTab", newStatus);
-                    location.reload();
+                    Swal.fire({ icon: 'success', title: msg }).then(() => {
+                        localStorage.setItem("lastTab", newStatus);
+                        location.reload();
+                    });
                 })
-                .catch(() => alert("Error updating status."));
+                .catch(() => Swal.fire({icon: 'error', title: 'Error updating status.'}));
         }
     </script>
 

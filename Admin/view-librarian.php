@@ -314,8 +314,8 @@ if (!$librarian) {
     </div>
 
     <script>
-        function updateStatus(id, newStatus) {
-            if (!confirm(`Are you sure you want to set this account to '${newStatus}'?`)) return;
+        async function updateStatus(id, newStatus) {
+            if (!(await confirmPopup(`Are you sure you want to set this account to '${newStatus}'?`, {title: 'Confirm Status Change'}))) return;
             fetch('update-librarian-status.php', {
                     method: 'POST',
                     headers: {
@@ -325,14 +325,13 @@ if (!$librarian) {
                 })
                 .then(res => res.text())
                 .then(msg => {
-                    alert(msg);
-                    location.reload();
+                    Swal.fire({ icon: 'success', title: msg }).then(() => location.reload());
                 })
-                .catch(() => alert('Error updating status.'));
+                .catch(() => Swal.fire({icon: 'error', title: 'Error updating status.'}));
         }
 
-        function deleteAccount(id) {
-            if (!confirm("⚠️ Are you sure you want to permanently delete this librarian account? This action cannot be undone.")) return;
+        async function deleteAccount(id) {
+            if (!(await confirmPopup("⚠️ Are you sure you want to permanently delete this librarian account? This action cannot be undone.", {title: 'Confirm Delete', confirmText: 'Delete'}))) return;
             fetch('delete-librarian.php', {
                     method: 'POST',
                     headers: {
@@ -342,10 +341,9 @@ if (!$librarian) {
                 })
                 .then(res => res.text())
                 .then(msg => {
-                    alert(msg);
-                    window.location.href = 'manage-librarians.php';
+                    Swal.fire({ icon: 'success', title: msg }).then(() => window.location.href = 'manage-librarians.php');
                 })
-                .catch(() => alert('Error deleting librarian.'));
+                .catch(() => Swal.fire({icon: 'error', title: 'Error deleting librarian.'}));
         }
     </script>
 </body>

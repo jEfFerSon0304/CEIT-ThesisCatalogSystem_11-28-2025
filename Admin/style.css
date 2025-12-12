@@ -520,6 +520,113 @@ input:focus {
     box-shadow: 0 5px 14px rgba(220, 38, 38, 0.4);
 }
 
+/* ===============================
+   BULK ACTIONS / TABLE CHECKBOXES
+   Improves visibility of select-all and per-row checkboxes
+   =============================== */
+.bulk-actions {
+    align-items: center;
+    gap: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.bulk-actions .bulk-left,
+.bulk-actions .bulk-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bulk-actions label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+/* Larger click targets for checkboxes */
+input.bulk-check-librarian,
+input.bulk-check-thesis,
+input.bulk-check-request,
+#selectAllLibrarians,
+#selectAllThesis,
+#selectAllRequests {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    transform: translateY(1px);
+}
+
+/* Make the first column narrow and centered */
+table thead th:first-child,
+table tbody td:first-child {
+    text-align: center;
+    width: 48px;
+}
+
+/* Slightly more contrast for action buttons in bulk UI */
+.bulk-actions .action-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+}
+
+@media (max-width: 720px) {
+    .bulk-actions {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+
+/* Make bulk-actions appear as an independent control panel above tables */
+.request-table .bulk-actions {
+    background: #f4f6f9; /* changed for borrowing-request bulk panel */
+    padding: 0; /* removed padding so items align flush with page */
+    border-radius: 0; /* removed rounded corners */
+    box-shadow: none; /* removed shadow to match background */
+    border: none; /* removed border to match background */
+    margin: 0; /* removed margin so panel blends with content */
+}
+
+.request-table table {
+    border-collapse: separate; /* keep table corners intact */
+    border-spacing: 0;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.request-table thead th {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Ensure bulk panel stretches and aligns like the screenshot */
+.request-table .bulk-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.request-table .bulk-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.request-table .bulk-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.request-table .bulk-right .action-btn {
+    min-width: 120px;
+}
+
 /* ===== SIDEBAR HIDDEN STATE ===== */
 .sidebar.hidden {
     left: -260px;

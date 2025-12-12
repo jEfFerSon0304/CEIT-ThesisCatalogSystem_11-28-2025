@@ -92,16 +92,26 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
             </div>
 
             <section class="request-table">
+                <div class="bulk-actions">
+                    <div class="bulk-left">
+                        <label><input type="checkbox" id="selectAllRequests"> <span style="margin-left:6px">Select All</span></label>
+                        <span id="bulkCountRequests" style="margin-left:12px;color:gray;"></span>
+                    </div>
+                    <div class="bulk-right">
+                        <button id="deleteSelectedRequests" class="action-btn delete" style="background:#e74c3c">Delete Selected</button>
+                    </div>
+                </div>
+
                 <table id="requestTable">
                     <thead>
                         <tr>
+                            <th style="width:40px"></th>
                             <th style="width: 10%;">Request No.</th>
                             <th style="width: 15%;">Student Name</th>
                             <th style="width: 35%;">Thesis Title</th>
                             <th style="width: 15%;">Department</th>
                             <th style="width: 10%;">Date Requested</th>
                             <th style="width: 15%;">Status</th>
-                            <!-- <th style="width: 10%;">Action</th> -->
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -125,7 +135,9 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                                 $json_data = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
 
                                 echo "
-<tr class='click-row' data-row=\"{$json_data}\">
+<tr class='click-row' data-row=\"{$json_data}\"> 
+
+    <td><input type='checkbox' class='bulk-check-request' value='" . htmlspecialchars($row['request_id']) . "'></td>
 
     <td>{$row['request_number']}</td>
 
@@ -368,6 +380,10 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
             document.querySelectorAll(".click-row").forEach(row => {
                 row.style.cursor = "pointer";
 
+                // prevent checkbox clicks from opening modal
+                const cb = row.querySelector('.bulk-check-request');
+                if (cb) cb.addEventListener('click', (ev) => ev.stopPropagation());
+
                 row.addEventListener("click", () => {
                     const data = row.getAttribute("data-row");
                     openModal({
@@ -445,8 +461,8 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
         /* ============================================================
            STATUS UPDATE (AJAX)
         ============================================================ */
-        function updateStatus(requestId, newStatus) {
-            if (!confirm("Are you sure you want to mark this as " + newStatus + "?")) return;
+        async function updateStatus(requestId, newStatus) {
+            if (!(await confirmPopup('Are you sure you want to mark this as ' + newStatus + '?', {title: 'Confirm Status Change'}))) return;
 
             fetch("update-request-status.php", {
                     method: "POST",
@@ -457,11 +473,12 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                 })
                 .then(res => res.text())
                 .then(msg => {
-                    alert(msg);
-                    localStorage.setItem("lastTab", newStatus);
-                    location.reload();
+                    Swal.fire({ icon: 'success', title: msg }).then(() => {
+                        localStorage.setItem("lastTab", newStatus);
+                        location.reload();
+                    });
                 })
-                .catch(() => alert("Error updating status."));
+                .catch(() => Swal.fire({ icon: 'error', title: 'Error updating status.' }));
         }
 
         /* ============================================================
@@ -490,6 +507,48 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
 
             menuIcon.textContent = menuIcon.textContent === "☰" ? "✖" : "☰";
         });
+
+        // Bulk actions for requests
+        (function() {
+            const selectAll = document.getElementById('selectAllRequests');
+            const deleteBtn = document.getElementById('deleteSelectedRequests');
+            const bulkCount = document.getElementById('bulkCountRequests');
+
+            function updateBulkCount() {
+                const checked = document.querySelectorAll('.bulk-check-request:checked').length;
+                if (bulkCount) bulkCount.textContent = checked ? `${checked} selected` : '';
+            }
+
+            document.addEventListener('change', (e) => {
+                if (e.target && e.target.classList && e.target.classList.contains('bulk-check-request')) {
+                    updateBulkCount();
+                }
+            });
+
+            if (selectAll) selectAll.addEventListener('change', () => {
+                const checks = document.querySelectorAll('.bulk-check-request');
+                checks.forEach(c => c.checked = selectAll.checked);
+                updateBulkCount();
+            });
+
+            if (deleteBtn) deleteBtn.addEventListener('click', async () => {
+                const ids = Array.from(document.querySelectorAll('.bulk-check-request:checked')).map(i => i.value);
+                if (!ids.length) return Swal.fire({icon:'info', title: 'Please select at least one request to delete.'});
+                if (!(await confirmPopup('Are you sure you want to delete selected requests?', {title: 'Confirm Delete', confirmText: 'Delete'}))) return;
+
+                const form = new FormData();
+                form.append('action', 'delete');
+                form.append('type', 'borrow_requests');
+                ids.forEach(id => form.append('ids[]', id));
+
+                fetch('bulk_action.php', { method: 'POST', body: form })
+                    .then(r => r.json())
+                    .then(j => {
+                        if (j.success) location.reload(); else Swal.fire({icon:'error', title: j.message || 'Error'});
+                    })
+                    .catch(() => Swal.fire({icon:'error', title: 'Network or server error'}));
+            });
+        })();
     </script>
 
 </body>

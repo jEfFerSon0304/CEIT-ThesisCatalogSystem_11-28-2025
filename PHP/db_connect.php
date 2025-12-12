@@ -6,7 +6,7 @@ $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "ceit_thesishub";
-$port = 3308;
+$port = 3306;
 
 $conn = new mysqli($servername, $username, $password, $dbname, $port);
 

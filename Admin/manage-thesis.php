@@ -89,14 +89,27 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                 </div>
 
                 <!-- Thesis Table -->
+                <div class="bulk-actions" style="margin-bottom:10px;">
+                    <div class="bulk-left">
+                        <label><input type="checkbox" id="selectAllThesis"> <span style="margin-left:6px">Select All</span></label>
+                        <span id="bulkCountThesis" style="margin-left:12px;color:gray;"></span>
+                    </div>
+                    <div class="bulk-right">
+                        <button id="makeAvailable" class="action-btn" style="background:#27ae60">Set Available</button>
+                        <button id="makeUnavailable" class="action-btn" style="background:#f39c12">Set Unavailable</button>
+                        <button id="deleteSelectedThesis" class="action-btn delete" style="background:#e74c3c">Delete Selected</button>
+                    </div>
+                </div>
+
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 40%;">Title</th>
-                            <th style="width: 25%;">Author(s)</th>
-                            <th style="width: 10%;">Year</th>
-                            <th style="width: 10%;">Department</th>
-                            <th style="width: 15%;">Availability</th>
+                            <th style="width:40px">Select</th>
+                            <th style="width: 36%;">Title</th>
+                            <th style="width: 20%">Author(s)</th>
+                            <th style="width: 8%">Year</th>
+                            <th style="width: 10%">Department</th>
+                            <th style="width: 10%">Availability</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -108,8 +121,9 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                         if ($result->num_rows > 0) {
                             while ($row = $result->fetch_assoc()) {
                                 $jsonData = json_encode($row, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG);
-                        ?>
+                                ?>
                                 <tr data-id="<?= htmlspecialchars($row['thesis_id']) ?>">
+                                    <td><input type="checkbox" class="bulk-check-thesis" value="<?= htmlspecialchars($row['thesis_id']) ?>"></td>
                                     <td><?= htmlspecialchars($row['title']) ?></td>
                                     <td><?= htmlspecialchars($row['author']) ?></td>
                                     <td><?= htmlspecialchars($row['year']) ?></td>
@@ -123,7 +137,7 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                                             <?= htmlspecialchars($row['availability']) ?>
                                         </span>
                                     </td>
-                                    <td>
+                                        <td>
                                         <button class="action-btn edit-btn" onclick='openEditModal(<?= $jsonData ?>)'>
                                             Edit
                                         </button>
@@ -132,7 +146,7 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                         <?php
                             }
                         } else {
-                            echo "<tr><td colspan='6'>No thesis records found.</td></tr>";
+                            echo "<tr><td colspan='7'>No thesis records found.</td></tr>";
                         }
                         $conn->close();
                         ?>
@@ -480,10 +494,10 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
             }
 
             if (deleteBtn) {
-                deleteBtn.addEventListener("click", () => {
+                deleteBtn.addEventListener("click", async () => {
                     const thesisId = document.getElementById("edit_thesis_id").value;
                     if (!thesisId) return showToast("Missing thesis id", "error");
-                    if (!confirm("Are you sure you want to delete this thesis?")) return;
+                    if (!(await confirmPopup('Are you sure you want to delete this thesis?', {title: 'Confirm Delete', confirmText: 'Delete'}))) return;
                     fetch("delete_thesis.php", {
                             method: "POST",
                             headers: {
@@ -529,6 +543,57 @@ $displayName = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : $_SESSION[
                 menuIcon.textContent = "☰";
             }
         });
+
+        // Bulk actions for thesis
+        (function() {
+            const selectAll = document.getElementById('selectAllThesis');
+            const deleteBtn = document.getElementById('deleteSelectedThesis');
+            const availBtn = document.getElementById('makeAvailable');
+            const unavailBtn = document.getElementById('makeUnavailable');
+            const bulkCount = document.getElementById('bulkCountThesis');
+
+            function updateBulkCount() {
+                const checked = document.querySelectorAll('.bulk-check-thesis:checked').length;
+                if (bulkCount) bulkCount.textContent = checked ? `${checked} selected` : '';
+            }
+
+            document.addEventListener('change', (e) => {
+                if (e.target && e.target.classList && e.target.classList.contains('bulk-check-thesis')) {
+                    updateBulkCount();
+                }
+            });
+
+            if (selectAll) selectAll.addEventListener('change', () => {
+                const checks = document.querySelectorAll('.bulk-check-thesis');
+                checks.forEach(c => c.checked = selectAll.checked);
+                updateBulkCount();
+            });
+
+            async function sendBulk(action) {
+                const ids = Array.from(document.querySelectorAll('.bulk-check-thesis:checked')).map(i => i.value);
+                if (!ids.length) return Swal.fire({icon:'info', title: 'Please select at least one thesis.'});
+                // Add explicit confirmations for each action
+                if (action === 'delete' && !(await confirmPopup('Are you sure you want to delete selected thesis(es)? This action cannot be undone.', {title: 'Confirm Delete', confirmText: 'Delete'}))) return;
+                if (action === 'available' && !(await confirmPopup('Are you sure you want to set selected thesis(es) as AVAILABLE?', {title: 'Confirm Availability'}))) return;
+                if (action === 'unavailable' && !(await confirmPopup('Are you sure you want to set selected thesis(es) as UNAVAILABLE?', {title: 'Confirm Availability'}))) return;
+
+                const form = new FormData();
+                form.append('action', action);
+                form.append('type', 'thesis');
+                ids.forEach(id => form.append('ids[]', id));
+
+                fetch('bulk_action.php', { method: 'POST', body: form })
+                    .then(r => r.json())
+                    .then(j => {
+                        if (j.success) location.reload(); else Swal.fire({icon:'error', title: j.message || 'Error'});
+                    })
+                    .catch(() => Swal.fire({icon:'error', title: 'Network or server error'}));
+            }
+
+            if (deleteBtn) deleteBtn.addEventListener('click', () => sendBulk('delete'));
+            if (availBtn) availBtn.addEventListener('click', () => sendBulk('available'));
+            if (unavailBtn) unavailBtn.addEventListener('click', () => sendBulk('unavailable'));
+        })();
     </script>
 </body>
 

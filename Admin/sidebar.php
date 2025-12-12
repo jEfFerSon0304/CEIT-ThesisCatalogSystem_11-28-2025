@@ -58,4 +58,22 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             }
         });
     });
+    
+    // Global confirm helper using SweetAlert2
+    window.confirmPopup = function(message, options = {}) {
+        const title = options.title || 'Are you sure?';
+        const confirmText = options.confirmText || 'Yes';
+        const cancelText = options.cancelText || 'Cancel';
+        const icon = options.icon || 'warning';
+        return Swal.fire({
+            title: title,
+            text: message,
+            icon: icon,
+            showCancelButton: true,
+            confirmButtonColor: '#0a3d91',
+            cancelButtonColor: '#d33',
+            confirmButtonText: confirmText,
+            cancelButtonText: cancelText
+        }).then(result => !!result.isConfirmed);
+    }
 </script>

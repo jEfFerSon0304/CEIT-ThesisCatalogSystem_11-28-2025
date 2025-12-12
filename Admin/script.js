@@ -170,14 +170,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // single delete (edit modal) - confirm then use delete_thesis.php (expects POST id param 'id')
     if (deleteBtn) {
-        deleteBtn.addEventListener("click", (e) => {
+        deleteBtn.addEventListener("click", async (e) => {
             e.preventDefault();
             if (!currentId) {
                 showToast("Missing thesis id", "error");
                 return;
             }
-            if (!confirm("Are you sure you want to delete this thesis?"))
-                return;
+            if (!(await confirmPopup('Are you sure you want to delete this thesis?', {title: 'Confirm Delete', confirmText: 'Delete'}))) return;
             fetch("delete_thesis.php", {
                 method: "POST",
                 headers: {
@@ -344,9 +343,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const confirmMsg =
                 action === "delete"
-                    ? `Delete ${ids.length} thesis(es)? This cannot be undone.`
-                    : `Change availability for ${ids.length} thesis(es)?`;
-            if (!confirm(confirmMsg)) return;
+                    ? `Are you sure you want to delete ${ids.length} thesis(es)? This cannot be undone.`
+                    : action === "available"
+                    ? `Are you sure you want to set ${ids.length} thesis(es) as AVAILABLE?`
+                    : `Are you sure you want to set ${ids.length} thesis(es) as UNAVAILABLE?`;
+            if (!(await confirmPopup(confirmMsg, {title: 'Confirm Bulk Action', confirmText: 'Proceed'}))) return;
 
             // build form data
             const fd = new FormData();
@@ -625,11 +626,8 @@ menuIcon.addEventListener("click", () => {
 });
 
 // ✅ Update Librarian Status
-function updateStatus(id, newStatus) {
-    if (
-        !confirm(`Are you sure you want to set this account to '${newStatus}'?`)
-    )
-        return;
+async function updateStatus(id, newStatus) {
+    if (!(await confirmPopup(`Are you sure you want to set this account to '${newStatus}'?`, {title: 'Confirm Status Change'}))) return;
 
     fetch("update-librarian-status.php", {
         method: "POST",
@@ -640,10 +638,9 @@ function updateStatus(id, newStatus) {
     })
         .then((res) => res.text())
         .then((msg) => {
-            alert(msg);
-            location.reload();
+            Swal.fire({ icon: 'success', title: msg }).then(() => location.reload());
         })
-        .catch(() => alert("Error updating status."));
+        .catch(() => Swal.fire({icon:'error', title: 'Error updating status.'}));
 }
 
 // ✅ Filter + Sort Functionality
